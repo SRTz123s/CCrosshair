@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+
+# Сборки и бинарники (PyInstaller)
+build/
+dist/
+installer-output/
+*.spec
+
+# Временные файлы
+*.log
+.DS_Store
