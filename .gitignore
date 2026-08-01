@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.egg-info/
 
 # Виртуальное окружение
 .venv/
@@ -13,7 +14,7 @@ env/
 .idea/
 .vscode/
 
-# Сборки и бинарники (PyInstaller)
+# Сборки и бинарники (PyInstaller / Inno Setup)
 build/
 dist/
 installer-output/
@@ -22,3 +23,6 @@ installer-output/
 # Временные файлы
 *.log
 .DS_Store
+
+# Локальные данные
+crosshair_settings.json

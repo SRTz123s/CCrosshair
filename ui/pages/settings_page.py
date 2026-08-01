@@ -221,6 +221,16 @@ class SettingsPage(BasePage):
             lambda v: self.state.set_program('mica', v))
         self.app_group.addSettingCard(self.mica_switch)
 
+        self.autostart_switch = SwitchSettingCard(
+            FluentIcon.POWER_BUTTON, t(self._lang, 'settings.autostart'),
+            t(self._lang, 'settings.autostart.desc'),
+        )
+        self.autostart_switch.setChecked(
+            bool(self.state.program['launch_with_windows']))
+        self.autostart_switch.checkedChanged.connect(
+            self._on_autostart_changed)
+        self.app_group.addSettingCard(self.autostart_switch)
+
         self.startup_switch = SwitchSettingCard(
             FluentIcon.PLAY_SOLID, t(self._lang, 'settings.startup'),
             t(self._lang, 'settings.startup.desc'),
@@ -309,12 +319,20 @@ class SettingsPage(BasePage):
         self.stack.setCurrentIndex(index)
 
     # ------------------------------------------------------------ события
+    def _on_autostart_changed(self, value):
+        from core import windows_api
+        value = bool(value)
+        self.state.set_program('launch_with_windows', value)
+        windows_api.set_autostart(value)
+
     def _on_program_changed(self, program):
         self.follow_crosshair_switch.setChecked(
             bool(program['follow_crosshair_accent']))
         self.follow_windows_switch.setChecked(
             bool(program['follow_windows_accent']))
         self.mica_switch.setChecked(bool(program['mica']))
+        self.autostart_switch.setChecked(
+            bool(program['launch_with_windows']))
         self.startup_switch.setChecked(bool(program['show_on_startup']))
 
     def apply_state(self):
@@ -363,6 +381,8 @@ class SettingsPage(BasePage):
             (self.follow_windows_switch, 'settings.accent.windows',
              'settings.accent.windows.desc'),
             (self.mica_switch, 'settings.mica', 'settings.mica.desc'),
+            (self.autostart_switch, 'settings.autostart',
+             'settings.autostart.desc'),
             (self.startup_switch, 'settings.startup', 'settings.startup.desc'),
         ]
         for switch, title_key, desc_key in switches:

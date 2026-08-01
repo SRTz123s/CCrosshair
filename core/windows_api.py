@@ -1,9 +1,14 @@
 """Низкоуровневые обёртки над Win32 API."""
 
 import ctypes
+import os
+import sys
 import winreg
 
 user32 = ctypes.windll.user32
+
+AUTOSTART_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+AUTOSTART_NAME = "Custom Crosshair"
 
 
 def get_foreground_window_title():
@@ -88,3 +93,52 @@ def remove_window_shadow(hwnd):
             ctypes.byref(policy), ctypes.sizeof(policy))
     except Exception:
         pass
+
+
+def _autostart_command():
+    """Команда автозапуска: exe при сборке, python main.py при разработке."""
+    if getattr(sys, 'frozen', False):
+        return '"%s"' % os.path.abspath(sys.executable)
+    script = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          'main.py')
+    return '"%s" "%s"' % (os.path.abspath(sys.executable), os.path.abspath(script))
+
+
+def set_autostart(enabled):
+    """Включает или выключает автозагрузку программы с Windows.
+
+    Запись ведётся в HKCU\\...\\Run — не требует прав администратора.
+    """
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, AUTOSTART_KEY, 0, winreg.KEY_SET_VALUE)
+        try:
+            if enabled:
+                winreg.SetValueEx(key, AUTOSTART_NAME, 0, winreg.REG_SZ,
+                                  _autostart_command())
+            else:
+                try:
+                    winreg.DeleteValue(key, AUTOSTART_NAME)
+                except FileNotFoundError:
+                    pass
+        finally:
+            winreg.CloseKey(key)
+        return True
+    except OSError:
+        return False
+
+
+def is_autostart_enabled():
+    """Возвращает True, если программа добавлена в автозагрузку."""
+    try:
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, AUTOSTART_KEY, 0, winreg.KEY_QUERY_VALUE)
+        try:
+            winreg.QueryValueEx(key, AUTOSTART_NAME)
+            return True
+        except FileNotFoundError:
+            return False
+        finally:
+            winreg.CloseKey(key)
+    except OSError:
+        return False

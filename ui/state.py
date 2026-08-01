@@ -36,6 +36,7 @@ class AppState(QObject):
             'follow_windows_accent': False,
             'show_on_startup': False,
             'mica': True,
+            'launch_with_windows': False,
         }
         self.hotkeys = {
             'toggle': 'Ctrl+Shift+C',

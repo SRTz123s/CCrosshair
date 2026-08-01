@@ -1,10 +1,11 @@
 """Главное окно приложения в стиле WinUI 3 (FluentWindow, как Zapret2)."""
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QColor, QIcon, QKeySequence
+from PyQt6.QtGui import QAction, QColor, QIcon, QKeySequence
+from PyQt6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 from qfluentwidgets import (FluentIcon, FluentWindow, InfoBar,
-                            InfoBarPosition, NavigationItemPosition,
-                            setThemeColor)
+                            InfoBarPosition, MessageDialog,
+                            NavigationItemPosition, setThemeColor)
 
 from config.settings_manager import SettingsManager
 from core import windows_api
@@ -36,8 +37,10 @@ class CrosshairFluentWindow(FluentWindow):
         self.setWindowTitle('Custom Crosshair')
         self.resize(880, 640)
         self.setMinimumSize(720, 480)
+        self._force_quit = False
         self._apply_app_icon()
         self._apply_mica()
+        self._build_tray()
 
         self._save_timer = QTimer(self)
         self._save_timer.setSingleShot(True)
@@ -79,6 +82,72 @@ class CrosshairFluentWindow(FluentWindow):
         except Exception:
             pass
 
+    def _build_tray(self):
+        self.tray = QSystemTrayIcon(self)
+        icon_path = resolve_icon_path()
+        if icon_path:
+            self.tray.setIcon(QIcon(icon_path))
+        self.tray.setToolTip('Custom Crosshair')
+
+        self.tray_menu = QMenu()
+        self.tray_show_action = QAction(self)
+        self.tray_hide_action = QAction(self)
+        self.tray_quit_action = QAction(self)
+        self.tray_menu.addAction(self.tray_show_action)
+        self.tray_menu.addAction(self.tray_hide_action)
+        self.tray_menu.addSeparator()
+        self.tray_menu.addAction(self.tray_quit_action)
+        self.tray_show_action.triggered.connect(self._show_from_tray)
+        self.tray_hide_action.triggered.connect(self._minimize_to_tray)
+        self.tray_quit_action.triggered.connect(self._really_quit)
+        self.tray.setContextMenu(self.tray_menu)
+        self.tray.activated.connect(self._on_tray_activated)
+        self.tray.show()
+        self._update_tray_menu_texts()
+
+    def _update_tray_menu_texts(self):
+        lang = self.language()
+        self.tray_show_action.setText(t(lang, 'tray.show'))
+        self.tray_hide_action.setText(t(lang, 'tray.hide'))
+        self.tray_quit_action.setText(t(lang, 'tray.quit'))
+
+    def _on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.DoubleClick:
+            self._show_from_tray()
+
+    def _show_from_tray(self):
+        self.show()
+        self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized)
+        self.raise_()
+        self.activateWindow()
+
+    def _minimize_to_tray(self):
+        self.hide()
+        try:
+            self.tray.showMessage(
+                'Custom Crosshair', t(self.language(), 'tray.minimized'),
+                QSystemTrayIcon.MessageIcon.Information, 2000)
+        except Exception:
+            pass
+
+    def _really_quit(self):
+        self._force_quit = True
+        self._quit_now()
+
+    def _quit_now(self):
+        """Останавливает фоновые задачи и завершает приложение."""
+        try:
+            self.timer.stop()
+        except Exception:
+            pass
+        self.save_settings(silent=True)
+        self.crosshair.hide()
+        try:
+            self.tray.hide()
+        except Exception:
+            pass
+        QApplication.instance().quit()
+
     def _load_settings(self):
         data = self.settings.load()
         self._current_theme_mode = data.get('theme', 'system')
@@ -101,8 +170,11 @@ class CrosshairFluentWindow(FluentWindow):
             'follow_windows_accent': data.get('follow_windows_accent', False),
             'show_on_startup': data.get('show_on_startup', False),
             'mica': data.get('mica', True),
+            'launch_with_windows': data.get('launch_with_windows', False),
         })
         self.state.set_hotkeys(data.get('hotkeys', {}))
+        windows_api.set_autostart(
+            bool(self.state.program['launch_with_windows']))
         self.crosshair.update_crosshair(**self.state.render_params())
 
     def _build_pages(self):
@@ -232,6 +304,7 @@ class CrosshairFluentWindow(FluentWindow):
         self.profiles_page.apply_language(language)
         self.programs_page.apply_language(language)
         self.about_page.apply_language(language)
+        self._update_tray_menu_texts()
 
     def apply_theme_mode(self, mode):
         self.state.set_program('theme', mode)
@@ -259,6 +332,7 @@ class CrosshairFluentWindow(FluentWindow):
             'follow_windows_accent': self.state.program['follow_windows_accent'],
             'show_on_startup': self.state.program['show_on_startup'],
             'mica': self.state.program['mica'],
+            'launch_with_windows': self.state.program['launch_with_windows'],
             'hotkeys': dict(self.state.hotkeys),
         }
         try:
@@ -294,8 +368,10 @@ class CrosshairFluentWindow(FluentWindow):
             'follow_windows_accent': False,
             'show_on_startup': False,
             'mica': True,
+            'launch_with_windows': False,
         })
         self.state.set_hotkeys(SettingsManager.DEFAULTS.get('hotkeys', {}))
+        windows_api.set_autostart(False)
         self.crosshair_page.apply_state()
         self.settings_page.apply_state()
         self.programs_page.apply_state()
@@ -340,7 +416,18 @@ class CrosshairFluentWindow(FluentWindow):
             super().keyPressEvent(event)
 
     def closeEvent(self, event):
-        self.timer.stop()
-        self.save_settings(silent=True)
-        self.crosshair.hide()
-        super().closeEvent(event)
+        if getattr(self, '_force_quit', False):
+            event.accept()
+            self._quit_now()
+            return
+        event.ignore()
+        lang = self.language()
+        dialog = MessageDialog(
+            t(lang, 'tray.close.title'), t(lang, 'tray.close.desc'), self)
+        dialog.yesButton.setText(t(lang, 'tray.minimize'))
+        dialog.cancelButton.setText(t(lang, 'tray.quit'))
+        if dialog.exec():
+            self._minimize_to_tray()
+        else:
+            self._force_quit = True
+            self._quit_now()
