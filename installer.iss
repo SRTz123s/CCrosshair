@@ -2,7 +2,7 @@
 ; Сборка: "C:\Program Files\Inno Setup 7\ISCC.exe" installer.iss
 
 #define MyAppName "Custom Crosshair"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.2"
 #define MyAppExeName "CustomCrosshair.exe"
 #define MyAppPublisher "Custom Crosshair"
 #define MyAppId "7C0B1E52-4B1F-4C6F-9A1E-3F2D5E6A7B8C"

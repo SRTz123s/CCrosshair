@@ -154,7 +154,7 @@ STRINGS = {
         'about.subtitle': 'Custom Crosshair — настраиваемый прицел поверх '
                           'всех окон.',
         'about.section.app': 'Приложение',
-        'about.version': 'Версия 1.0.0',
+        'about.version': 'Версия 1.0.2',
         'about.desc': 'Приложение рисует прицел в центре экрана поверх всех '
                       'окон. Параметры настраиваются на странице «Прицел», '
                       'тему интерфейса — на странице «Настройки», а показ '
@@ -309,7 +309,7 @@ STRINGS = {
         'about.subtitle': 'Custom Crosshair — a customizable crosshair above '
                           'all windows.',
         'about.section.app': 'Application',
-        'about.version': 'Version 1.0.0',
+        'about.version': 'Version 1.0.2',
         'about.desc': 'The application draws a crosshair in the center of the '
                       'screen above all windows. Parameters are configured on '
                       'the "Crosshair" page, the interface theme on the '

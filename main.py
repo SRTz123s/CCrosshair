@@ -8,12 +8,14 @@ from PyQt6.QtWidgets import QApplication
 
 from config.settings_manager import SettingsManager
 from core.qt_fixes import fix_qt_plugins
+from core.single_instance import ensure_single_instance
 from ui.app_icon import APP_ICON_ICO, APP_ICON_PNG
 from ui.main_window import CrosshairFluentWindow
 from ui.theme import apply_theme_mode
 
 fix_qt_plugins()
 
+SINGLE_INSTANCE_GUARD = ensure_single_instance()
 ICON_CANDIDATES = (APP_ICON_ICO, APP_ICON_PNG)
 
 

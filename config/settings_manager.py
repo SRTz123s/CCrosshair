@@ -37,6 +37,8 @@ class SettingsManager:
         'show_on_startup': False,
         'mica': True,
         'launch_with_windows': False,
+        'window_width': 880,
+        'window_height': 640,
         'hotkeys': {
             'toggle': 'Ctrl+Shift+C',
             'save': 'Ctrl+Shift+S',

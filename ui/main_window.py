@@ -4,13 +4,14 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction, QColor, QIcon, QKeySequence
 from PyQt6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 from qfluentwidgets import (FluentIcon, FluentWindow, InfoBar,
-                            InfoBarPosition, MessageDialog,
-                            NavigationItemPosition, setThemeColor)
+                            InfoBarPosition, NavigationItemPosition,
+                            setThemeColor)
 
 from config.settings_manager import SettingsManager
 from core import windows_api
 from core.crosshair_window import CrosshairWindow
 from ui.app_icon import resolve_icon_path
+from ui.close_dialog import CloseChoiceDialog
 from ui.i18n import t
 from ui.pages.about_page import AboutPage
 from ui.pages.crosshair_page import CrosshairPage
@@ -34,9 +35,9 @@ class CrosshairFluentWindow(FluentWindow):
         self._current_theme_mode = 'system'
         self._applied_accent = None
 
-        self.setWindowTitle('Custom Crosshair')
-        self.resize(880, 640)
+        self.setWindowTitle(windows_api.MAIN_WINDOW_TITLE)
         self.setMinimumSize(720, 480)
+        self._restore_window_size()
         self._force_quit = False
         self._apply_app_icon()
         self._apply_mica()
@@ -81,6 +82,17 @@ class CrosshairFluentWindow(FluentWindow):
             self.setMicaEffectEnabled(bool(enabled))
         except Exception:
             pass
+
+    def _restore_window_size(self):
+        """Восстанавливает размер окна из сохранённых настроек."""
+        try:
+            saved = self.settings.load()
+            width = int(saved.get('window_width', 880))
+            height = int(saved.get('window_height', 640))
+            self.resize(max(width, self.minimumWidth()),
+                        max(height, self.minimumHeight()))
+        except Exception:
+            self.resize(880, 640)
 
     def _build_tray(self):
         self.tray = QSystemTrayIcon(self)
@@ -333,6 +345,8 @@ class CrosshairFluentWindow(FluentWindow):
             'show_on_startup': self.state.program['show_on_startup'],
             'mica': self.state.program['mica'],
             'launch_with_windows': self.state.program['launch_with_windows'],
+            'window_width': self.width(),
+            'window_height': self.height(),
             'hotkeys': dict(self.state.hotkeys),
         }
         try:
@@ -422,12 +436,17 @@ class CrosshairFluentWindow(FluentWindow):
             return
         event.ignore()
         lang = self.language()
-        dialog = MessageDialog(
-            t(lang, 'tray.close.title'), t(lang, 'tray.close.desc'), self)
-        dialog.yesButton.setText(t(lang, 'tray.minimize'))
-        dialog.cancelButton.setText(t(lang, 'tray.quit'))
-        if dialog.exec():
+        dialog = CloseChoiceDialog(
+            t(lang, 'tray.close.title'), t(lang, 'tray.close.desc'),
+            t(lang, 'tray.minimize'), t(lang, 'tray.quit'), self)
+        result = dialog.exec()
+        if result == CloseChoiceDialog.MINIMIZE_RESULT:
             self._minimize_to_tray()
-        else:
+        elif result == CloseChoiceDialog.QUIT_RESULT:
             self._force_quit = True
             self._quit_now()
+        # else: крестик / Esc / фон — передумал, окно остаётся открытым
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._schedule_save()

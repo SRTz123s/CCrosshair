@@ -9,6 +9,7 @@ user32 = ctypes.windll.user32
 
 AUTOSTART_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 AUTOSTART_NAME = "Custom Crosshair"
+MAIN_WINDOW_TITLE = 'Custom Crosshair'
 
 
 def get_foreground_window_title():
@@ -142,3 +143,27 @@ def is_autostart_enabled():
             winreg.CloseKey(key)
     except OSError:
         return False
+
+
+def find_window_by_title(title):
+    """Находит hwnd окна по точному заголовку или None."""
+    hwnd = user32.FindWindowW(None, title)
+    return int(hwnd) if hwnd else None
+
+
+def activate_existing_window(title):
+    """Разворачивает и выводит на передний план окно с данным заголовком.
+
+    Используется при повторном запуске, когда приложение уже свёрнуто в трей.
+    """
+    hwnd = find_window_by_title(title)
+    if not hwnd:
+        return False
+    try:
+        user32.ShowWindow(hwnd, 9)        # SW_RESTORE
+        user32.BringWindowToTop(hwnd)
+        user32.SetForegroundWindow(hwnd)
+        user32.SetFocus(hwnd)
+    except Exception:
+        pass
+    return True
